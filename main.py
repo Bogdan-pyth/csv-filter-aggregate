@@ -28,14 +28,28 @@ def parse_arguments():
 
 def condition_parser(condition):
     delimeters = (">", "<", "=")
+
+    # if not any(x in condition for x in delimeters):
+    #     raise ValueError(
+    #         "Некорректное условие сравнения (не найден оператор сравнения)"
+    #     )
+    # if condition.count('>') > 1 or condition.count()
+
+    # доделать логику проверок. выбрасываем ошибки при >> >= ><>< итд,
+    # также сделать проверку при текстовом формате значения - допустим только оператор =
+
     for delimeter in delimeters:
         if delimeter in condition:
             field, operator, value = condition.partition(delimeter)
             return field.strip(), operator, value.strip()
 
 
-def filter(data, condition):
+def filter_csv(data, condition):
     cond_field, operator, cond_value = condition_parser(condition)
+
+    if cond_field not in data[0]:
+        raise KeyError(f"Не найдено поле {cond_field}")
+
     filtered_data = []
 
     try:
@@ -59,8 +73,16 @@ def filter(data, condition):
 # агрегация
 
 
-def aggregate(data, condition):
+def aggregate_csv(data, condition):
+
+    if "=" not in condition:
+        raise ValueError(f'Условие агрегации должно быть вида "поле=оператор"')
+
     field, operator = condition.split("=")
+
+    if field not in data[0]:
+        raise KeyError(f"Не найдено поле: {field}")
+
     agg_data = [
         int(row[field]) if "." not in row[field] else float(row[field]) for row in data
     ]
@@ -71,6 +93,10 @@ def aggregate(data, condition):
         result = max(agg_data)
     elif operator == "avg":
         result = sum(agg_data) / len(agg_data)
+    else:
+        raise ValueError(
+            f"Неизвестный оператор агрегации: {operator}, доступные операторы: min, max, avg"
+        )
 
     result_row = {field: result}
 
@@ -92,10 +118,10 @@ def main():
     data = read_csv(args.file)
 
     if args.where:
-        data = filter(data, args.where)
+        data = filter_csv(data, args.where)
 
     if args.aggregate:
-        data = aggregate(data, args.aggregate)
+        data = aggregate_csv(data, args.aggregate)
 
     print_table(data)
 
