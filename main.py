@@ -62,7 +62,7 @@ def filter(data, condition):
 def aggregate(data, condition):
     field, operator = condition.split("=")
     agg_data = [
-        int(row[field]) if row[field].isdigit() else float(row[field]) for row in data
+        int(row[field]) if "." not in row[field] else float(row[field]) for row in data
     ]
 
     if operator == "min":
