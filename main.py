@@ -38,15 +38,21 @@ def filter(data, condition):
     cond_field, operator, cond_value = condition_parser(condition)
     filtered_data = []
 
-    for row in data:
-        field_value = row[cond_field]
-        if operator == "=" and float(field_value) == float(cond_value):
-            filtered_data.append(row)
-        elif operator == ">" and float(field_value) > float(cond_value):
-            filtered_data.append(row)
-        elif operator == "<" and float(field_value) < float(cond_value):
-            filtered_data.append(row)
-
+    try:
+        cond_value = float(cond_value)
+        for row in data:
+            field_value = row[cond_field]
+            if operator == "=" and float(field_value) == cond_value:
+                filtered_data.append(row)
+            elif operator == ">" and float(field_value) > cond_value:
+                filtered_data.append(row)
+            elif operator == "<" and float(field_value) < cond_value:
+                filtered_data.append(row)
+    except ValueError:
+        for row in data:
+            field_value = row[cond_field]
+            if operator == "=" and field_value == cond_value:
+                filtered_data.append(row)
     return filtered_data
 
 
