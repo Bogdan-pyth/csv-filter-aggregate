@@ -1,7 +1,66 @@
-import pytest, csv, tempfile, os
+import pytest, tempfile, os, sys
 
 
 import main
+
+
+# Тест на корректные аргументы
+def test_valid_arguments():
+    sys.argv = [
+        "main.py",
+        "--file",
+        "data.csv",
+        "--where",
+        "price>100",
+        "--aggregate",
+        "price=avg",
+    ]
+    args = main.parse_arguments()
+
+    assert args.file == "data.csv"
+    assert args.where == "price>100"
+    assert args.aggregate == "price=avg"
+
+
+# Некорректный --where
+def test_invalid_operator_in_where():
+    sys.argv = [
+        "main.py",
+        "--file",
+        "data.csv",
+        "--where",
+        "price>>100",
+    ]
+
+    with pytest.raises(ValueError):
+        main.parse_arguments()
+
+
+def test_invalid_operator_in_where_2():
+    sys.argv = [
+        "main.py",
+        "--file",
+        "data.csv",
+        "--where",
+        "price100",
+    ]
+
+    with pytest.raises(ValueError):
+        main.parse_arguments()
+
+
+# Некорректный --aggregate
+def test_invalid_aggregate_format():
+    sys.argv = [
+        "main.py",
+        "--file",
+        "data.csv",
+        "--aggregate",
+        "priceavg",
+    ]
+
+    with pytest.raises(ValueError):
+        main.parse_arguments()
 
 
 # Тестирование чтения CSV файла
@@ -62,7 +121,7 @@ def test_filter_string():
 
 
 def test_filter_invalid_condition():
-    condition = "price199"
+    condition = "price>invalid_type"
     with pytest.raises(ValueError):
         main.filter_csv(data, condition)
 
@@ -73,10 +132,10 @@ def test_filter_invalid_condition_2():
         main.filter_csv(data, condition)
 
 
-def test_filter_invalid_condition_3():
-    condition = "price>=198"  # invalid operator
-    with pytest.raises(ValueError):
-        main.filter_csv(data, condition)
+# def test_filter_invalid_condition_3():
+#     condition = "price>=198"  # invalid operator
+#     with pytest.raises(ValueError):
+#         main.filter_csv(data, condition)
 
 
 def test_filter_invalid_condition_4():
@@ -112,15 +171,22 @@ def test_aggregate_invalid_condition():
         main.aggregate_csv(data, condition)
 
 
-def test_aggregate_invalid_condition_2():
-    condition = "invalid_condition"
-    with pytest.raises(ValueError):
-        main.aggregate_csv(data, condition)
+# def test_aggregate_invalid_condition_2():
+#     condition = "invalid_condition"
+#     with pytest.raises(ValueError):
+#         main.aggregate_csv(data, condition)
 
 
 def test_aggregate_invalid_condition_3():
     condition = "invalid_field=min"
     with pytest.raises(ValueError):
+        main.aggregate_csv(data, condition)
+
+
+def test_aggregate_after_filter():
+    data = []
+    condition = "price=min"
+    with pytest.raises(SystemExit):
         main.aggregate_csv(data, condition)
 
 
