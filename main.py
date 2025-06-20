@@ -3,18 +3,16 @@ from tabulate import tabulate
 
 
 # чтение файла
-
-
 def read_csv(file_path):
     with open(file_path, mode="r") as file:
         reader = csv.DictReader(file)
         data = [row for row in reader]
+        if not data:
+            raise SystemExit(f"В файле '{file_path}' отсутствуют данные.")
     return data
 
 
 # аргументы скрипта
-
-
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Обработка CSV файлов")
     parser.add_argument("--file", required=True, help="Путь к файлу")
@@ -34,34 +32,37 @@ def parse_arguments():
 
     # проверка синтаксиса агрегации --aggregate
     if args.aggregate:
-        if "=" not in args.aggregate:
+        if args.aggregate.count("=") != 1:
             raise ValueError(f"Условие агрегации должно быть вида 'поле=оператор'.")
     return args
 
 
-# обработка фильтрации
-
-
+# фильтрация --where
+# разбираем условие фильтрации
 def condition_parser(condition):
     delimeters = (">", "<", "=")
 
     for delimeter in delimeters:
         if delimeter in condition:
+            # "поле, по которому сравниваем", "оператор(<, > или =)", "значение, с которым сравниваем"
             field, operator, value = condition.partition(delimeter)
             return field.strip(), operator, value.strip()
 
 
+# фильтрация
 def filter_csv(data, condition):
     cond_field, operator, cond_value = condition_parser(condition)
 
+    # если поля нет в таблице
     if cond_field not in data[0]:
         raise ValueError(f"Не найдено поле '{cond_field}'.")
 
     filtered_data = []
 
-    # в блоке try обрабатываем число, в блоке except обрабатываем текст
+    # в блоке try обрабатываем фильтрацию по числовому значению, в блоке except по текстовому
     try:
         cond_value = float(cond_value)
+
         for row in data:
             field_value = row[cond_field]
             if operator == "=" and float(field_value) == cond_value:
@@ -70,13 +71,18 @@ def filter_csv(data, condition):
                 filtered_data.append(row)
             elif operator == "<" and float(field_value) < cond_value:
                 filtered_data.append(row)
+
     except ValueError:
         for row in data:
             field_value = row[cond_field]
             is_float = False
+
+            # блок try обрабатывает ошибку, когда числовое поле пытаются отфильтровать по текстовому значению
             try:
                 field_value = float(field_value)
-                is_float = True
+                is_float = True  # через флаг, чтобы не отдавать ошибку в except
+
+            # поле в таблице и значение для фильтрации - текстовые
             except ValueError:
                 if operator == "=" and field_value == cond_value:
                     filtered_data.append(row)
@@ -92,25 +98,29 @@ def filter_csv(data, condition):
     return filtered_data
 
 
-# агрегация
-
-
+# агрегация --aggregate
 def aggregate_csv(data, condition):
 
+    # разбираем условие агрегации
     field, operator = condition.split("=")
+    field, operator = field.strip(), operator.strip()
 
+    # обрабатываем неверный ввод поля
     try:
         if field not in data[0]:
             raise ValueError(f"Не найдено поле: '{field}'.")
-    except IndexError:
+
+    except IndexError:  # если пришел пустой список после фильтрации
         raise SystemExit("Отсутствуют данные для агрегации.")
 
     try:
+        # собираем все поле в список значений
         agg_data = [
             int(row[field]) if "." not in row[field] else float(row[field])
             for row in data
         ]
-    except ValueError:
+
+    except ValueError:  # если выбрано не числовое поле
         raise ValueError("Агрегация доступна только по числовым полям.")
 
     if operator == "min":
@@ -130,15 +140,11 @@ def aggregate_csv(data, condition):
 
 
 # вывод данных
-
-
 def print_table(data):
     print(tabulate(data, headers="keys", tablefmt="pretty"))
 
 
 # main
-
-
 def main():
     try:
         args = parse_arguments()
