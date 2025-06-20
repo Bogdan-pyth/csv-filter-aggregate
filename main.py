@@ -29,14 +29,17 @@ def parse_arguments():
 def condition_parser(condition):
     delimeters = (">", "<", "=")
 
-    # if not any(x in condition for x in delimeters):
-    #     raise ValueError(
-    #         "Некорректное условие сравнения (не найден оператор сравнения)"
-    #     )
-    # if condition.count('>') > 1 or condition.count()
+    # проверка корректности оператора
+    operator_count = 0
+    for delimeter in delimeters:
+        operator_count += condition.count(delimeter)
 
-    # доделать логику проверок. выбрасываем ошибки при >> >= ><>< итд,
-    # также сделать проверку при текстовом формате значения - допустим только оператор =
+    if operator_count > 1:
+        raise ValueError(
+            f"Некорректный оператор сравнения, доступные операторы: {delimeters}."
+        )
+    elif operator_count < 1:
+        raise ValueError("Не найден оператор сравнения.")
 
     for delimeter in delimeters:
         if delimeter in condition:
@@ -48,11 +51,12 @@ def filter_csv(data, condition):
     cond_field, operator, cond_value = condition_parser(condition)
 
     if cond_field not in data[0]:
-        raise KeyError(f"Не найдено поле {cond_field}")
+        raise ValueError(f"Не найдено поле {cond_field}")
 
     filtered_data = []
 
-    try:
+    # в блоке try обрабатываем число, в блоке except обрабатываем текст
+    try:    
         cond_value = float(cond_value)
         for row in data:
             field_value = row[cond_field]
@@ -65,8 +69,22 @@ def filter_csv(data, condition):
     except ValueError:
         for row in data:
             field_value = row[cond_field]
-            if operator == "=" and field_value == cond_value:
-                filtered_data.append(row)
+            is_float = False
+            try:
+                field_value = float(field_value)
+                is_float = True
+            except ValueError:
+                if operator == "=" and field_value == cond_value:
+                    filtered_data.append(row)
+                elif operator != "=":
+                    raise ValueError(
+                        f'Некорректный оператор сравнения "{operator}". Для сравнения по текстовому значению доступен только оператор "=".'
+                    )
+
+            if is_float:
+                raise ValueError(
+                    f"Для поля {cond_field} недоступно сравнение по текстовому значению: {cond_value}. Введите число."
+                )
     return filtered_data
 
 
@@ -81,7 +99,7 @@ def aggregate_csv(data, condition):
     field, operator = condition.split("=")
 
     if field not in data[0]:
-        raise KeyError(f"Не найдено поле: {field}")
+        raise ValueError(f"Не найдено поле: {field}")
 
     agg_data = [
         int(row[field]) if "." not in row[field] else float(row[field]) for row in data

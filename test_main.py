@@ -62,17 +62,30 @@ def test_filter_string():
 
 
 def test_filter_invalid_condition():
-    data = [{"price": "999"}, {"price": "199"}, {"price": "1199"}]
-    result = main.filter_csv(data, "price=not_a_number")
-    assert len(result) == 0
+    condition = "price199"
+    with pytest.raises(ValueError):
+        main.filter_csv(data, condition)
+
+
+def test_filter_invalid_condition_2():
+    condition = "invalid_field>198"
+    with pytest.raises(ValueError):
+        main.filter_csv(data, condition)
+
+
+def test_filter_invalid_condition_3():
+    condition = "price>=198"  # invalid operator
+    with pytest.raises(ValueError):
+        main.filter_csv(data, condition)
+
+
+def test_filter_invalid_condition_4():
+    condition = "brand>apple"
+    with pytest.raises(ValueError):
+        main.filter_csv(data, condition)
 
 
 # агрегация
-data = [
-    {"name": "iphone 15 pro", "brand": "apple", "price": "999", "rating": "4.9"},
-    {"name": "galaxy s23 ultra", "brand": "samsung", "price": "1199", "rating": "4.8"},
-    {"name": "redmi note 12", "brand": "xiaomi", "price": "199", "rating": "4.6"},
-]
 
 
 def test_aggregate_avg():
@@ -94,21 +107,21 @@ def test_aggregate_max():
 
 
 def test_aggregate_invalid_condition():
-    data = [{"price": "999"}, {"price": "199"}, {"price": "1199"}]
+    condition = "price=invalid_operator"
     with pytest.raises(ValueError):
-        main.aggregate_csv(data, "price=invalid_operator")
+        main.aggregate_csv(data, condition)
 
 
 def test_aggregate_invalid_condition_2():
-    data = [{"price": "999"}, {"price": "199"}, {"price": "1199"}]
+    condition = "invalid_condition"
     with pytest.raises(ValueError):
-        main.aggregate_csv(data, "invalid_condition")
+        main.aggregate_csv(data, condition)
 
 
 def test_aggregate_invalid_condition_3():
-    data = [{"price": "999"}, {"price": "199"}, {"price": "1199"}]
-    with pytest.raises(KeyError):
-        main.aggregate_csv(data, "invalid_field=min")
+    condition = "invalid_field=min"
+    with pytest.raises(ValueError):
+        main.aggregate_csv(data, condition)
 
 
 # вывод
